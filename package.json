@@ -1,0 +1,16 @@
+{
+  "name": "linkchecker",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "tsnd --respawn ./main.ts"
+  },
+  "dependencies": {
+    "discord.js": "^12.5.3",
+    "ts-node-dev": "^1.1.8",
+    "ytdl-core": "^4.8.3"
+  },
+  "devDependencies": {
+    "typescript": "^4.3.5"
+  }
+}

@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+      "incremental": true,
+      "target": "ES2019",
+      "module": "commonjs",
+      "sourceMap": true,
+      "outDir": "./build",
+      "rootDir": "./",
+      "resolveJsonModule": true,
+    }
+  }
