@@ -1,46 +1,41 @@
-import { CHANNEL, TOKEN } from './token.json';
-import { Client } from 'discord.js';
+import { TOKEN } from './token.json';
+import { ChannelResolvable, Client, Message } from 'discord.js';
 import ytdl = require('ytdl-core');
 
 const client = new Client();
-const prefix = "checklinks"
-let ytlinks = []
-let linkstocheck = []
+const prefix = "checksongs"
+
+async function checklinks(channelid: ChannelResolvable, returnchannel: Message) {
+
+	const channel = client.channels.resolve(channelid);
+	if (!channel.isText()) return;
+	const messages = channel.messages.fetch();
+
+	await Promise.all((await messages).map(async (msg) => {
+		if (msg.content.startsWith('-p')) {
+			const url = msg.content.replace(/ /g, "").slice('-p'.length);
+			await ytdl.getInfo(url).catch(async () => {
+				await returnchannel.channel.send(`This link does not work! ${url}`);
+			});
+		}
+	}))
+	await returnchannel.channel.send('All done!')
+};
 
 client.once('ready', () => {
-	console.info(`${client.user.tag} is back, you mortals.`)
-	client.user.setPresence({activity:{type: 'WATCHING', name: `for your playlists`}, status:'online'})
-})
+	console.info(`${client.user.tag} is back, you mortals.`);
+	client.user.setPresence({activity:{type: 'WATCHING', name: `for your playlists`}, status:'online'});
+});
 
-client.on('message', async (msg) => {
-	if (!msg.content.startsWith(prefix) || msg.author.bot || !msg.member) return;
-	const channel = client.channels.resolve(CHANNEL)
-	if (!channel.isText()) return
+client.on('message', async (message) => {
+	if (!message.content.startsWith(prefix) || message.author.bot || !message.member) return;
 
-	channel.messages.fetch().then(messages => {
-		messages.forEach(msg => {
-			ytlinks.push(msg.content)
-		})
-	}).then(() => {
-		
-	for (let index = 0; index < ytlinks.length - 1; index++) {
-		const element = new String(ytlinks[index]) 
-		if (element.startsWith('-p')) {
+	const args = message.content.slice(prefix.length).trim().split(' ').shift().toString();
+	if (args.length == 0) return message.channel.send('You did not specify a channel id! (Right click on the channel, and copy id)')
+	if (!message.guild.channels.resolve(args)) return message.channel.send('This channel is invalid, or I am not a member of it!')
+	
+	checklinks(args, message)
 
-			linkstocheck.push(element.replace(/ /g, "").slice('-p'.length)) 
-		}
-	}
-	}).then(() => {
-
-		linkstocheck.forEach(link => {
-			ytdl.getInfo(link).catch(() => {		
-				msg.channel.send(`This link does not work! ${link}`)
-			}).then(() => {
-				ytlinks = []
-				linkstocheck = []
-			} )
-		})
-	})
-})
+});
 
 client.login(`${TOKEN}`)
