@@ -7,18 +7,48 @@ const prefix = "checksongs"
 
 async function checklinks(channelid: ChannelResolvable, returnchannel: Message) {
 
+	const handleSuccessMessage = (url: string) => () => {
+		return { status: "success", message: `This one works!: <${url}>`, }
+  	}
+  	const handleFailureMessage = (url: string) => () => {
+		return { status: "failure", message: `This one does not work!: <${url}>`, }
+	}
+
+  	const getUrlInfo = async (messages: string[]) => {
+		const flattenedMessages = messages.reduce((acc: string[], message: string) => {
+	  		acc.push(...message.split("\n"))
+	  		return acc
+	}, [])
+  
+	const urls = flattenedMessages
+	  .filter(m => m.startsWith("-p"))
+	  .map(m => m.replace(/-p /g, ""))
+  
+	const responses = await Promise.all(
+	  urls.map(
+		url => ytdl
+		  .getInfo(url)
+		  .then(handleSuccessMessage(url))
+		  .catch(handleFailureMessage(url))
+	  )
+	)
+  
+	const successfulResponses = responses.filter(r => r.status === "success")
+	const failedResponses = responses.filter(r => r.status === "failure")
+
+	for (const response of successfulResponses) {
+		await returnchannel.channel.send(response.message)
+	}
+	for (const response of failedResponses) {
+		await returnchannel.channel.send(response.message)
+	}
+  }
+
 	const channel = client.channels.resolve(channelid);
 	if (!channel.isText()) return;
-	const messages = channel.messages.fetch();
+	const messages = (await channel.messages.fetch()).map(m => m.content);
 
-	await Promise.all((await messages).map(async (msg) => {
-		if (msg.content.startsWith('-p')) {
-			const url = msg.content.replace(/ /g, "").slice('-p'.length);
-			await ytdl.getInfo(url).catch(async () => {
-				await returnchannel.channel.send(`This link does not work! ${url}`);
-			});
-		}
-	}))
+  	await getUrlInfo(messages)
 	await returnchannel.channel.send('All done!')
 };
 
@@ -35,7 +65,6 @@ client.on('message', async (message) => {
 	if (!message.guild.channels.resolve(args)) return message.channel.send('This channel is invalid, or I am not a member of it!')
 	
 	checklinks(args, message)
-
 });
 
 client.login(`${TOKEN}`)
